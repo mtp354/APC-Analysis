@@ -19,16 +19,38 @@ df <- df %>% filter(!(Year %in% c("1975-2019", "Statistic could not be calculate
 df <- df %>% filter(!(Age %in% c("85+ years", "Unknown", "", "  ~")))
 df$Age <- as.integer(str_remove(df$Age, " years"))
 df$Year <- as.integer(df$Year)
-df$Rate <- as.numeric(df$Rate)
+# Removing commas from the rate variable, and coercing into float
+df$Rate <- as.numeric(gsub(",", "", df$Rate))
 # Adding birth year
 df$Cohort <- df$Year - df$Age
 # Only keeping, age, period, cohort and rate variables
 df <- df %>% select(Age, Year, Cohort, Rate)
+# Adding an minimum age cutoff if desired
+age_min = 18
+df <- df %>% filter(Age > 18)
+# Renaming all lowercase so that the hexamap function can work properly
 names(df) <- c('age','period','cohort','rate')
+
 
 # Now Creating Hexamap plots:
 rmax <- max(df$rate)  # Getting the max value to set the color range, can manually set if desired
 plot_APChexamap(dat = df, y_var = "rate", color_range = c(0,rmax), color_vec = hcl.colors(rmax), label_size = 0.9)
+
+# Creating Standard line graphs: (technically weighted means based on population should be used here by calling weighted.mean(rate, pop))
+# Incidence by age
+df %>% select(age, period, rate) %>% group_by(age) %>% summarise(rate = mean(rate)) %>% ggplot(aes(x = age, y = rate)) + geom_line() +
+  ggtitle("Incidence by Age") + xlab("Age (Years)") + ylab("Incidence per 100k") + ylim(0, 50)
+
+# Incidence by period
+df %>% select(age, period, rate) %>% group_by(period) %>% summarise(rate = mean(rate)) %>% ggplot(aes(x = period, y = rate)) + geom_line() +
+  ggtitle("Incidence by Period") + xlab("Period (Calendar Years)") + ylab("Incidence per 100k") + ylim(0, 30)
+
+# incidence by age for 5 groups of cohorts
+df %>% select(age, cohort, rate) %>% mutate(cohort = cut(cohort, 5, dig.lab=10)) %>% group_by(age, cohort) %>% summarise(rate = mean(rate)) %>%
+  ggplot(aes(x = age, y = rate, colour=cohort)) + geom_line(linewidth=0.8, alpha=0.8) + 
+  ggtitle("Incidence by Age, stratified by Cohort") + xlab("Age (Years)") + ylab("Incidence per 100k") + ylim(0, 75)
+
+
 
 # Now Calculating Mutual Information Scores for comparative effect strength
 # 1st step, discretize data
@@ -48,9 +70,6 @@ names(info) <- c("Variable")
 
 # For exporting to excel via clipboard:
 write.table(info, file = "clipboard", sep = "\t", row.names = T, col.names = T)
-
-
-
 
 
 
