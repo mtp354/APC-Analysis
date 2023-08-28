@@ -28,8 +28,8 @@ df$Cohort <- df$Year - df$Age
 # Only keeping, age, period, cohort and rate variables
 df <- df %>% select(Age, Year, Cohort, Rate, Pop)
 # Adding an minimum age cutoff if desired
-age_min = 18
-df <- df %>% filter(Age > 18)
+age_min = 0
+df <- df %>% filter(Age > age_min)
 # Renaming all lowercase so that the hexamap function can work properly
 names(df) <- c('age','period','cohort','rate','pop')
 
@@ -51,10 +51,11 @@ df %>% select(age, cohort, rate) %>% mutate(cohort = cut(cohort, 5, dig.lab=10))
   ggplot(aes(x = age, y = rate, colour=cohort)) + geom_line(linewidth=0.8, alpha=0.8) + 
   ggtitle("Incidence by Age, stratified by Cohort") + xlab("Age (Years)") + ylab("Incidence per 100k") + ylim(0, rmax)
 
-# Now Calculating Mutual Information Scores for comparative effect strength
-# Defining APC score function, returns a vector of (Total info %, % Attributed to Age, % Attributed to Period, % Attributed to Cohort)
+# Defining APC Mutual Information score function
 score <- function(df){
-  df <- discretize(df, disc = 'equalfreq', nbins = min(length(unique(df$age)), length(unique(df$period))))
+  test1 <- df  # Saving unbinned df
+  df <- discretize(df, disc = 'equalwidth', nbins = min(length(unique(df$age)), length(unique(df$period))))
+  test2 <- df  # Saving binned df
   rinfo <- entropy(df$rate)  # self info
   remaining <- condentropy(df$rate, data.frame(df$age, df$period, df$cohort))  # Info after conditioning
   
@@ -64,15 +65,34 @@ score <- function(df){
   c_mi <- min(mutinformation(df$rate, df$cohort), condinformation(df$rate, df$cohort, df$age), condinformation(df$rate, df$cohort, df$period))
   mi <- c(a_mi, p_mi, c_mi)
   
-  return(round(c(100*(rinfo - remaining)/rinfo, 100*mi/sum(mi)), 3))
+  # Calculating Uncertainty
+  test1$id <- 1:nrow(test1)
+  test2$id <- 1:nrow(test2)
+  test1 <- merge(test1, test2, by='id', all = T) %>% select(rate.x, rate.y)
+  names(test1) <- c('unbinned','binned')
+  test1 <- test1 %>% group_by(binned) %>% summarise(unbinned = mean(unbinned)) %>% 
+    mutate(bin_diff = binned - lag(binned)) %>% mutate(rate_diff = unbinned - lag(unbinned)) %>% filter(!is.na(bin_diff))
+  test1 <- mean(test1$rate_diff/test1$bin_diff)
+  
+  return(round(c(100*(rinfo - remaining)/rinfo, test1, 100*mi/sum(mi)), 3))
 }
 
+
 # Calculating and converting to Dataframe for export
-info <- data.frame(c('Total Information Contained', 'Attribution to Age', 'Attribution to Period', 'Attribution to Cohort'), score(df))
-names(info) <- c("Variable","Score (%)")
+info <- data.frame(c('Total Information Contained (%)', 'Uncertainty (Incidence per 100k)', 'Attribution to Age (%)', 'Attribution to Period (%)', 'Attribution to Cohort (%)'), score(df))
+names(info) <- c("Variable","Score")
 
 # For exporting to excel via clipboard:
 write.table(info, file = "clipboard", sep = "\t", row.names = F, col.names = T)
+
+
+
+
+
+
+
+
+
 
 
 
