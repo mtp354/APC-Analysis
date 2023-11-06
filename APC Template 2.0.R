@@ -74,26 +74,24 @@ score <- function(df){
   # Combining to get CIs
   rinfo <- c(rinfo, rinfo-err, rinfo+err)
   remaining <- c(remaining, remaining-err, remaining+err)
-  a_mi <- c(a_mi, a_mi-err, a_mi+err)
-  p_mi <- c(p_mi, p_mi-err, p_mi+err)
-  c_mi <- c(c_mi, c_mi-err, c_mi+err)
+  
+  a_mi_vec <- c(a_mi/(a_mi+p_mi+c_mi), (a_mi-err)/((a_mi-err)+(p_mi+err)+(c_mi+err)), (a_mi+err)/((a_mi+err)+(p_mi-err)+(c_mi-err)))
+  p_mi_vec <- c(p_mi/(a_mi+p_mi+c_mi), (p_mi-err)/((a_mi+err)+(p_mi-err)+(c_mi+err)), (p_mi+err)/((a_mi-err)+(p_mi+err)+(c_mi-err)))
+  c_mi_vec <- c(c_mi/(a_mi+p_mi+c_mi), (c_mi-err)/((a_mi+err)+(p_mi+err)+(c_mi-err)), (c_mi+err)/((a_mi-err)+(p_mi-err)+(c_mi+err)))
+  
   
   
   tot <- c((rinfo[1]-remaining[1])/rinfo[1], (rinfo[2]-remaining[3])/rinfo[2], (rinfo[3]-remaining[2])/rinfo[3])
-  a_mi <- c(a_mi[1]/(a_mi[1]+p_mi[1]+c_mi[1]), a_mi[2]/(a_mi[2]+p_mi[3]+c_mi[3]), a_mi[3]/(a_mi[3]+p_mi[2]+c_mi[2]))
-  p_mi <- c(p_mi[1]/(a_mi[1]+p_mi[1]+c_mi[1]), p_mi[2]/(a_mi[3]+p_mi[2]+c_mi[3]), p_mi[3]/(a_mi[2]+p_mi[3]+c_mi[2]))
-  c_mi <- c(c_mi[1]/(a_mi[1]+p_mi[1]+c_mi[1]), c_mi[2]/(a_mi[3]+p_mi[3]+c_mi[2]), c_mi[3]/(a_mi[2]+p_mi[2]+c_mi[3]))
-  
-  combined <- data.frame(round(100*matrix(c(tot, a_mi, p_mi, c_mi), nrow = 4, ncol = 3, byrow = T), 3))
+  combined <- data.frame(round(100*matrix(c(tot, a_mi_vec, p_mi_vec, c_mi_vec), nrow = 4, ncol = 3, byrow = T), 3))
   names(combined) <- c('Estimate','Lower','Upper')
   row.names(combined) <- c('Total Information Contained (%)','Age (%)','Period (%)','Cohort (%)')
   return(combined)
 }
 
 
+
 # Calculating and converting for export
 info <- score(df)
-
 # For exporting to excel via clipboard:
 write.table(info, file = "clipboard", sep = "\t", row.names = T, col.names = T)
 
