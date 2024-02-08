@@ -103,19 +103,13 @@ df <- read.csv("W:\\Matt P\\Projects\\202305 APC\\Simulated_APC_Data.csv", strin
 df <- df %>% filter(form == 'Sinusoidal', predictor == 'AP', noise_lvl == 0.1)  # Taking 1 example dataset
 
 # Creating several models
-mod_a <- gam(rate ~ te(age), data = df)
-mod_p <- gam(rate ~ te(period), data = df)
-mod_c <- gam(rate ~ te(cohort), data = df)
-mod_ap <- gam(rate ~ te(age, period), data = df)
-mod_ac <- gam(rate ~ te(age, cohort), data = df)
-mod_pc <- gam(rate ~ te(period, cohort), data = df)
 mod_apc <- gam(rate ~ te(age, period, cohort), data = df)
-mod_list <- list(mod_a, mod_p, mod_c, mod_ap, mod_ac, mod_pc, mod_apc)
+mod_list <- list(mod_apc)
 
 # Plotting partial effects
-plot_partialAPCeffects(mod_ap, dat = df, variable = 'age')
-plot_partialAPCeffects(mod_ap, dat = df, variable = 'period')
-plot_partialAPCeffects(mod_ap, dat = df, variable = 'cohort')
+plot_partialAPCeffects(mod_apc, dat = df, variable = 'age')
+plot_partialAPCeffects(mod_apc, dat = df, variable = 'period')
+plot_partialAPCeffects(mod_apc, dat = df, variable = 'cohort')
 
 # Summarising effect strengths
 create_APCsummary(model_list = mod_list, dat = df)
